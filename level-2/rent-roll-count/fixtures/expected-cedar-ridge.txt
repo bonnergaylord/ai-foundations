@@ -1,0 +1,10 @@
+Units: 12
+Occupied: 11
+Vacant: 1
+Monthly rent, all units: 17350
+Annual gross potential rent: 208200
+Broker notes: 4
+- Unit 110 signed 2026-08-01 with one month free rent as a move-in concession.
+- Unit 111 is being marketed at 1500 which is where the last three renewals landed.
+- Unit 112 is occupied by the on-site manager as part of their compensation.
+- Units 108 and 109 are on legacy leases signed before the 2025 renovations.
