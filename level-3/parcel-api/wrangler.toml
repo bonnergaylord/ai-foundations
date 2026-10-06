@@ -1,0 +1,8 @@
+name = "wake-parcel-api"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "wake-parcels"
+database_id = "57c7c6ae-42af-437d-a24f-d46ef6416277"

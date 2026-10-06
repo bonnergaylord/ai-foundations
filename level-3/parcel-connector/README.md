@@ -1,14 +1,15 @@
 # Parcel connector (Module 3.1)
 
-An MCP server with one tool, `lookup_parcel(address)`. It reads the Wake County parcel
-sample CSV on this laptop and returns that parcel's record. Standard library Python only.
+An MCP server for the Wake County parcel sample, in standard library Python only.
 
-The dataset is not committed. Put `parcel-sample-wake.csv` in `data/`, or pass its path
-as the first argument.
+In Module 3.1 it read the CSV on this laptop. Since Module 3.2 it calls the hosted parcel
+API (`../parcel-api/`), so it works without the file. It has three tools:
+`lookup_parcel(address)`, `find_parcels_over_acreage(min_acres)` and
+`get_last_sale(pin or address)`.
 
 Connect it to Claude Code:
 
-    claude mcp add wake-parcels -- python /full/path/to/server.py
+    claude mcp add wake-parcels -e PARCEL_API_URL=https://wake-parcel-api.bonner-e05.workers.dev -- python /full/path/to/server.py
 
 Then ask, for example, "What's the acreage on 977 Hillsborough Street?"
 
