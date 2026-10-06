@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wake Parcel Lookup</title>
+<meta name="description" content="Type a Wake County street address and see the parcel record from a 250-record sample database.">
+<style>
+  :root {
+    --bg: #fbfaf7; --surface: #ffffff; --ink: #1c1b19; --muted: #6b675f;
+    --line: #e4e0d8; --accent: #2f5d50; --accent-ink: #ffffff; --warn-bg: #f6eedc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614; --surface: #1f1e1b; --ink: #ecebe6; --muted: #a29e94;
+      --line: #34322d; --accent: #7fb8a6; --accent-ink: #10201b; --warn-bg: #3a3322;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); margin: 0 0 28px; }
+  form { display: flex; gap: 8px; }
+  label.sr { position: absolute; left: -9999px; }
+  input[type=search] {
+    flex: 1; min-width: 0; font: inherit; padding: 12px 14px; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  }
+  input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button {
+    font: inherit; font-weight: 600; padding: 12px 18px; border: 0; border-radius: 8px;
+    background: var(--accent); color: var(--accent-ink); cursor: pointer;
+  }
+  button:disabled { opacity: .6; cursor: progress; }
+  .hint { color: var(--muted); font-size: .9rem; margin: 8px 0 0; }
+  #out { margin-top: 28px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+  .card h2 { font-size: 1.2rem; margin: 0 0 2px; }
+  .card .sub { color: var(--muted); margin: 0 0 16px; font-size: .95rem; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 20px; margin: 0; }
+  dt { color: var(--muted); }
+  dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .blank { color: var(--muted); font-style: italic; }
+  .msg { background: var(--warn-bg); border-radius: 10px; padding: 16px 20px; }
+  .msg strong { display: block; margin-bottom: 2px; }
+  .msg ul { margin: 8px 0 0; padding-left: 20px; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: .88rem; }
+  footer a, .card a { color: var(--accent); }
+  @media (max-width: 480px) {
+    form { flex-direction: column; }
+    dl { grid-template-columns: 1fr; gap: 0; }
+    dd { margin-bottom: 8px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Wake County parcel lookup</h1>
+  <p class="lede">Type a street address and see the parcel record from a 250-record sample of Wake County parcels.</p>
+
+  <form id="f">
+    <label class="sr" for="addr">Street address</label>
+    <input id="addr" type="search" name="address" placeholder="977 Hillsborough St" autocomplete="off" required>
+    <button id="go" type="submit">Look up</button>
+  </form>
+  <p class="hint">Case, extra spaces and Road/Rd spelling don't matter. A city or ZIP on the end is ignored.</p>
+
+  <div id="out" aria-live="polite"></div>
+
+  <footer>
+    Data: a 250-record Wake County parcel sample provided for coursework, not the live county
+    database. It has no owner names. Served from a Cloudflare D1 database through
+    <a href="https://wake-parcel-api.bonner-e05.workers.dev/">a public read-only API</a>.
+    Built for the AI Foundations certificate, Module 3.3.
+    <a href="https://github.com/bonnergaylord/ai-foundations/tree/main/level-3">Source</a>.
+  </footer>
+</main>
+
+<script>
+  const API = "https://wake-parcel-api.bonner-e05.workers.dev";
+  const out = document.getElementById("out");
+  const input = document.getElementById("addr");
+  const go = document.getElementById("go");
+
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const money = (n) => "$" + n.toLocaleString("en-US");
+  const blank = '<span class="blank">blank in the county file</span>';
+  const show = (v, fmt = (x) => esc(x)) => (v === null || v === undefined || v === "" ? blank : fmt(v));
+
+  function render(data, typed) {
+    if (data.status === "found") {
+      const r = data.record;
+      const sale = r.last_sale_date ? `${money(r.last_sale_price)} on ${esc(r.last_sale_date)}` : blank;
+      out.innerHTML = `
+        <div class="card">
+          <h2>${esc(r.site_address.replace(/\s+/g, " "))}</h2>
+          <p class="sub">${esc(r.city)}, NC ${esc(r.zip)} · PIN ${esc(r.pin)}</p>
+          <dl>
+            <dt>Land use</dt><dd>${show(r.land_use)}</dd>
+            <dt>Zoning</dt><dd>${show(r.zoning)}</dd>
+            <dt>Acreage</dt><dd>${show(r.acreage)}</dd>
+            <dt>Heated sq ft</dt><dd>${show(r.heated_sqft, (n) => n.toLocaleString("en-US"))}</dd>
+            <dt>Year built</dt><dd>${show(r.year_built)}</dd>
+            <dt>Assessed value</dt><dd>${show(r.assessed_value, money)}</dd>
+            <dt>Last sale</dt><dd>${sale}</dd>
+            <dt>Tax district</dt><dd>${show(r.tax_district)}</dd>
+            <dt>Owner</dt><dd><span class="blank">not in this dataset</span></dd>
+          </dl>
+        </div>`;
+    } else if (data.status === "not_found") {
+      out.innerHTML = `<div class="msg"><strong>No parcel at “${esc(typed)}”.</strong>
+        That address isn't in the 250-record sample. Check the house number and street name.</div>`;
+    } else if (data.status === "ambiguous") {
+      out.innerHTML = `<div class="msg"><strong>More than one parcel matches.</strong> Add more of the address:
+        <ul>${data.candidates.map((c) => `<li>${esc(c)}</li>`).join("")}</ul></div>`;
+    } else {
+      out.innerHTML = `<div class="msg"><strong>Couldn't look that up.</strong> ${esc(data.message || "")}</div>`;
+    }
+  }
+
+  async function lookup(address) {
+    go.disabled = true;
+    out.innerHTML = `<p class="hint">Looking up…</p>`;
+    try {
+      const res = await fetch(`${API}/parcels?address=${encodeURIComponent(address)}`);
+      render(await res.json(), address);
+    } catch {
+      render({ status: "error", message: "The parcel database didn't respond. Try again in a moment." }, address);
+    } finally {
+      go.disabled = false;
+    }
+  }
+
+  document.getElementById("f").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const address = input.value.trim();
+    if (!address) return;
+    history.replaceState(null, "", `?address=${encodeURIComponent(address)}`);
+    lookup(address);
+  });
+
+  const initial = new URLSearchParams(location.search).get("address");
+  if (initial) { input.value = initial; lookup(initial); }
+</script>
+</body>
+</html>
