@@ -107,7 +107,7 @@
       out.innerHTML = `
         <div class="card">
           <h2>${esc(r.site_address.replace(/\s+/g, " "))}</h2>
-          <p class="sub">${esc(r.city)}, NC ${esc(r.zip)} · PIN ${esc(r.pin)}</p>
+          <p class="sub">${esc(r.city)}, NC ${esc(r.zip)} · PIN ${esc(r.pin)}${data.match && data.match !== "exact" ? ` · matched: ${esc(data.match)}` : ""}</p>
           <dl>
             <dt>Land use</dt><dd>${show(r.land_use)}</dd>
             <dt>Zoning</dt><dd>${show(r.zoning)}</dd>
@@ -122,7 +122,8 @@
         </div>`;
     } else if (data.status === "not_found") {
       out.innerHTML = `<div class="msg"><strong>No parcel at “${esc(typed)}”.</strong>
-        That address isn't in the 250-record sample. Check the house number and street name.</div>`;
+        That address isn't in the 250-record Wake County sample.
+        ${(data.suggestions_not_matches || []).length ? `Did you mean:<ul>${data.suggestions_not_matches.map((a) => `<li><a href="?address=${encodeURIComponent(a)}">${esc(a)}</a></li>`).join("")}</ul>` : "Check the house number and street name."}</div>`;
     } else if (data.status === "ambiguous") {
       out.innerHTML = `<div class="msg"><strong>More than one parcel matches.</strong> Add more of the address:
         <ul>${data.candidates.map((c) => `<li>${esc(c)}</li>`).join("")}</ul></div>`;
