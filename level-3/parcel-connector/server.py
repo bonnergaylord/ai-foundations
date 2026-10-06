@@ -36,7 +36,10 @@ TOOLS = [
             "acreage, heated square feet, year built, assessed value, last sale and tax "
             "district. Use this whenever someone asks about a specific address. If the "
             "address is not found, say so and do not describe a parcel the tool did not "
-            "return. " + NO_OWNER + " " + NULLS
+            "return; suggestions_not_matches are other real addresses you may offer as "
+            "'did you mean', never as the answer. When a record is found, its 'match' "
+            "field says what was assumed (e.g. 'street type assumed', 'without "
+            "directional', 'unit ignored'); tell the person. " + NO_OWNER + " " + NULLS
         ),
         "inputSchema": {
             "type": "object",
@@ -91,6 +94,25 @@ TOOLS = [
         },
         "path": "/parcels/last-sale",
     },
+    {
+        "name": "find_sales_in_date_range",
+        "description": (
+            "List every parcel in the Wake County sample whose most recent sale falls "
+            "between two dates, oldest first, with sale date and price. Use for questions "
+            "like 'what sold in 2020' or 'sales between March and June 2023'. Only each "
+            "parcel's latest sale is in the data, so an earlier sale of a parcel that sold "
+            "again later will not appear; say so when it matters. " + NO_OWNER
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "from_date": {"type": "string", "description": "Start date, YYYY-MM-DD, inclusive."},
+                "to_date": {"type": "string", "description": "End date, YYYY-MM-DD, inclusive."},
+            },
+            "required": ["from_date", "to_date"],
+        },
+        "path": "/parcels/sales",
+    },
 ]
 
 
@@ -99,6 +121,8 @@ def call_api(tool, args):
         params = {"address": args.get("address", "")}
     elif tool["name"] == "find_parcels_over_acreage":
         params = {"min": args.get("min_acres", 1)}
+    elif tool["name"] == "find_sales_in_date_range":
+        params = {"from": args.get("from_date", ""), "to": args.get("to_date", "")}
     else:
         params = {k: args[k] for k in ("pin", "address") if args.get(k)}
     url = API + tool["path"] + "?" + urllib.parse.urlencode(params)
@@ -135,7 +159,7 @@ def main():
             reply(msg_id, {
                 "protocolVersion": msg.get("params", {}).get("protocolVersion", PROTOCOL_VERSION),
                 "capabilities": {"tools": {}},
-                "serverInfo": {"name": "wake-parcels", "version": "0.2.0"},
+                "serverInfo": {"name": "wake-parcels", "version": "0.3.0"},
             })
         elif method == "tools/list":
             reply(msg_id, {"tools": [{k: v for k, v in t.items() if k != "path"} for t in TOOLS]})

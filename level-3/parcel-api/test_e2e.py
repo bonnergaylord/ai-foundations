@@ -72,6 +72,43 @@ for typed, pin in [
 status, body = get("/parcels", address="1400 Cedar Ridge Road")
 check("1400 Cedar Ridge Road is not found (404)", status == 404, f"status {status}")
 
+# Capstone prep (Module 3.4): formats a reviewer might type. Each must find the parcel
+# and say what it assumed, in the record's "match" field.
+for typed, pin in [
+    ("977 Hillsborough", "0743949082"),             # no street type
+    ("Unit 4, 977 Hillsborough St", "0743949082"),  # unit before the number
+    ("#4 977 Hillsborough St", "0743949082"),
+    ("977 W Hillsborough St", "0743949082"),        # directional the county file lacks
+    ("0743949082", "0743949082"),                   # a PIN typed in the address box
+]:
+    status, body = get("/parcels", address=typed)
+    d = json.loads(body)
+    got = d.get("record", {}).get("pin")
+    check(f"typed '{typed}' finds PIN {pin} and says how", status == 200 and got == pin
+          and d.get("match"), f"{status} {got} {d.get('match')}")
+
+# Near misses stay not-found, but suggest the closest real addresses, labeled as such.
+for typed, expect in [("977 Hillsboro St", "977 Hillsborough St"),
+                      ("978 Hillsborough St", "977 Hillsborough St")]:
+    status, body = get("/parcels", address=typed)
+    sugg = json.loads(body).get("suggestions_not_matches", [])
+    check(f"'{typed}' is 404 and suggests {expect}", status == 404
+          and any(s.startswith(expect) for s in sugg), f"{status} {sugg}")
+
+# A street with no house number is too vague to guess at.
+check("'Hillsborough St' alone is not a lookup", get("/parcels", address="Hillsborough St")[0] in (300, 400, 404))
+
+# Sales in a date range.
+status, body = get("/parcels/sales", **{"from": "2020-01-01", "to": "2020-12-31"})
+d = json.loads(body)
+want = sorted((r["last_sale_date"], r["pin"]) for r in rows
+              if r["last_sale_date"] and "2020-01-01" <= r["last_sale_date"] <= "2020-12-31")
+got = [(p["last_sale_date"], p["pin"]) for p in d.get("parcels", [])]
+check(f"sales in 2020 return the {len(want)} parcels the CSV has, oldest first",
+      status == 200 and got == want, f"{status} got {len(got)}")
+check("sales with a malformed date is refused with 400",
+      get("/parcels/sales", **{"from": "2020", "to": "2020-12-31"})[0] == 400)
+
 # Every parcel over an acre: same set as the CSV, largest first, none at exactly 1.0.
 status, body = get("/parcels/over-acreage", min="1")
 data = json.loads(body)
