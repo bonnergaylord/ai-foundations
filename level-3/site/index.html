@@ -37,6 +37,10 @@
   }
   button:disabled { opacity: .6; cursor: progress; }
   .hint { color: var(--muted); font-size: .9rem; margin: 8px 0 0; }
+  button.ex {
+    font-size: .88rem; font-weight: 500; padding: 4px 10px; margin: 4px 4px 0 0;
+    background: transparent; color: var(--accent); border: 1px solid var(--line); border-radius: 999px;
+  }
   #out { margin-top: 28px; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
   .card h2 { font-size: 1.2rem; margin: 0 0 2px; }
@@ -68,6 +72,11 @@
     <button id="go" type="submit">Look up</button>
   </form>
   <p class="hint">Case, extra spaces and Road/Rd spelling don't matter. A city or ZIP on the end is ignored.</p>
+  <p class="hint">Try:
+    <button type="button" class="ex">977 Hillsborough St</button>
+    <button type="button" class="ex">9696 Buck Jones Road</button>
+    <button type="button" class="ex">8874 Six Forks Rd</button>
+  </p>
 
   <div id="out" aria-live="polite"></div>
 
@@ -142,6 +151,12 @@
     history.replaceState(null, "", `?address=${encodeURIComponent(address)}`);
     lookup(address);
   });
+
+  document.querySelectorAll("button.ex").forEach((b) =>
+    b.addEventListener("click", () => {
+      input.value = b.textContent;
+      document.getElementById("f").requestSubmit();
+    }));
 
   const initial = new URLSearchParams(location.search).get("address");
   if (initial) { input.value = initial; lookup(initial); }
